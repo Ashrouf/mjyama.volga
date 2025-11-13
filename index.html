@@ -30,23 +30,39 @@ img{max-width:100%;margin-top:6px}
 </div>
 
 <script>
-// yksinkertainen salasana, muuta nämä:
+// HUOM: Vaikka salasana on nyt hajautettu (hash), se on silti kovakoodattu
+// etupäähän (frontend) ja vain hiekkalaatikkomainen (sandbox) parannus.
 const ALLOWED_USER = "xX_adm991";
-const ALLOWED_PASS = "Rv4p!tL9";
+// SHA-256 -tarkiste salasanalle "Rv4p!tL9"
+const PASS_HASH = "3c1e94cf4f39b5c60c69cf6d5a93d4041b6f82bba36ee2db6ab86916f2f31bb2";
 
 const loginDiv = document.getElementById("login");
 const forumDiv = document.getElementById("forum");
 const msg = document.getElementById("msg");
 const postsDiv = document.getElementById("posts");
 
-document.getElementById("btnLogin").onclick = ()=>{
+/**
+ * Laskee SHA-256 -hajautuksen annetusta merkkijonosta.
+ * @param {string} str Hajautettava merkkijono (salasana).
+ * @returns {Promise<string>} Hajautus merkkijonona.
+ */
+async function hashInput(str) {
+  const buf = new TextEncoder().encode(str);
+  const digest = await crypto.subtle.digest("SHA-256", buf);
+  // Muunnetaan ArrayBuffer heksadesimaalimerkkijonoksi
+  return Array.from(new Uint8Array(digest)).map(b=>b.toString(16).padStart(2,"0")).join("");
+}
+
+document.getElementById("btnLogin").onclick = async ()=>{
   const u = document.getElementById("user").value.trim();
   const p = document.getElementById("pass").value;
-  if(u===ALLOWED_USER && p===ALLOWED_PASS){
+
+  // Tarkistetaan tunnus ja syötetyn salasanan hajautus
+  if(u===ALLOWED_USER && await hashInput(p)===PASS_HASH){
     loginDiv.style.display="none";
     forumDiv.style.display="block";
     loadPosts();
-  }else{
+  } else {
     msg.textContent="Väärä tunnus tai salasana";
   }
 };
