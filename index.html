@@ -1,44 +1,78 @@
 <!doctype html>
-<html lang="fi">
-<head>
+<html lang="ar" dir="rtl"> <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1" />
-<title>Foorumi Demo</title>
+<title>tahiri nafsiq</title>
 <style>
-  body { font-family: system-ui, Arial; margin: 40px auto; max-width: 700px; padding: 0 16px; background: #f4f4f9; }
-  input, textarea, button { width: 100%; padding: 10px; margin-top: 8px; box-sizing: border-box; border-radius: 4px; border: 1px solid #ccc; }
-  button { background: #007bff; color: white; border: none; font-weight: bold; cursor: pointer; }
+  /* Fontit on säädetty tukemaan arabialaisia merkkejä paremmin (Tahoma/Segoe UI) */
+  body { 
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
+    margin: 40px auto; 
+    max-width: 700px; 
+    padding: 0 16px; 
+    background: #f4f4f9; 
+    text-align: center; /* Keskitetään teksti */
+  }
+  input, textarea, button { 
+    width: 100%; 
+    padding: 12px; 
+    margin-top: 10px; 
+    box-sizing: border-box; 
+    border-radius: 4px; 
+    border: 1px solid #ccc; 
+    font-family: inherit; /* Perii saman fontin */
+    font-size: 1.1em; /* Hieman suurempi teksti arabiaa varten */
+  }
+  button { 
+    background: #007bff; 
+    color: white; 
+    border: none; 
+    font-weight: bold; 
+    cursor: pointer; 
+  }
   button:hover { background: #0056b3; }
   
-  /* Viestien tyylit */
-  .post { border: 1px solid #ddd; border-radius: 8px; padding: 15px; margin-top: 15px; background: #fff; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+  /* Viestien tyylit (Palautetaan vasemmalta oikealle suunta viesteille jos halutaan, tai pidetään RTL) */
+  .post { 
+    border: 1px solid #ddd; 
+    border-radius: 8px; 
+    padding: 15px; 
+    margin-top: 15px; 
+    background: #fff; 
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1); 
+    text-align: right; /* Viestit oikeaan laitaan */
+  }
   img { max-width: 100%; margin-top: 10px; border-radius: 4px; }
   
   /* Piilottaa foorumin oletuksena */
   #forum { display: none; }
-  #msg { color: red; margin-top: 10px; }
+  #msg { color: red; margin-top: 10px; font-weight: bold; }
 </style>
 </head>
 <body>
 
 <div id="login">
-  <h2>Kirjaudu sisään</h2>
-  <input id="user" placeholder="Käyttäjätunnus">
-  <input id="pass" type="password" placeholder="Salasana">
-  <button id="btnLogin">Kirjaudu</button>
+  <h2>تسجيل الدخول / ورود</h2>
+  
+  <input id="user" placeholder="اسم المستخدم / نام کاربری" dir="auto">
+  
+  <input id="pass" type="password" placeholder="كلمة المرور / رمز عبور" dir="auto">
+  
+  <button id="btnLogin">دخول / ورود</button>
+  
   <p id="msg"></p>
 </div>
 
 <div id="forum">
-  <h2>Yksityinen foorumi</h2>
-  <textarea id="postText" placeholder="Kirjoita viesti..."></textarea>
+  <h2>tahiri nafsiq</h2>
+  <textarea id="postText" placeholder="اكتب رسالة... / پیام بنویسید..." dir="auto"></textarea>
   <input id="fileInput" type="file" accept="image/*">
-  <button id="btnPost">Lähetä</button>
+  <button id="btnPost">إرسال / ارسال</button>
   <div id="posts"></div>
 </div>
 
 <script>
-// TÄSSÄ OVAT UUDET VAHVAT TUNNUKSET:
+// Tunnukset (Samat vahvat kuin aiemmin)
 const ALLOWED_USER = "User_9xQ2";
 const ALLOWED_PASS = "J7!m#bL9v2$Zp";
 
@@ -57,7 +91,8 @@ document.getElementById("btnLogin").onclick = () => {
     forumDiv.style.display = "block";
     loadPosts();
   } else {
-    msg.textContent = "Väärä tunnus tai salasana";
+    // Virheviesti: "Väärä tunnus tai salasana" (Arabia / Persia)
+    msg.textContent = "اسم المستخدم أو كلمة المرور غير صحيحة / نام کاربری یا رمز عبور اشتباه است";
   }
 };
 
@@ -66,7 +101,7 @@ document.getElementById("btnPost").onclick = () => {
   const text = document.getElementById("postText").value.trim();
   const file = document.getElementById("fileInput").files[0];
 
-  if (!text && !file) { alert("Kirjoita teksti tai lisää kuva."); return; }
+  if (!text && !file) { alert("Empty message / رسالة فارغة"); return; }
 
   const post = { text, time: Date.now() };
 
@@ -101,6 +136,7 @@ function loadPosts() {
     postEl.className = "post";
 
     const timeEl = document.createElement("div");
+    // Aika (localeString näyttää ajan selaimen kielen mukaan)
     timeEl.innerHTML = `<b>${new Date(p.time).toLocaleString()}</b>`;
     
     const textEl = document.createElement("div");
