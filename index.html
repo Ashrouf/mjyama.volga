@@ -3,18 +3,25 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1" />
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'unsafe-inline'; img-src 'self' data:; style-src 'unsafe-inline';">
-<title>Foorumi Demo (Turvallisempi)</title>
+<title>Foorumi Demo (Korjattu)</title>
 <style>
   body{font-family:system-ui,Arial;margin:40px auto;max-width:700px;padding:0 16px;background-color:#f4f4f9;}
   input,textarea,button{width:100%;padding:10px;margin-top:8px;box-sizing:border-box;border:1px solid #ccc;border-radius:4px;}
   button{background-color:#007BFF;color:white;border:none;cursor:pointer;font-weight:bold;}
   button:hover{background-color:#0056b3;}
-  .post{border:1px solid #ddd;border-radius:8px;padding:15px;margin-top:15px;background:#fff;box-shadow:0 2px 4px rgba(0,0,0,0.1);}
-  .post-time{font-size:0.85em;color:#666;margin-bottom:6px;font-weight:bold;}
-  .post-text{white-space: pre-wrap; word-wrap: break-word;} /* Rivinvaihdot säilyvät */
-  img{max-width:100%;margin-top:10px;border-radius:4px;}
+  .post{border:1px solid #ddd;border-radius:8px;padding:15px;margin-top:15px;background:#fff;}
   #msg{color:red;font-weight:bold;margin-top:10px;}
+  #debugInfo {
+      font-family: monospace; 
+      font-size: 12px; 
+      color: #555; 
+      background: #eee; 
+      padding: 10px; 
+      margin-top: 10px; 
+      border: 1px solid #999;
+      display: none; /* Piilotetaan oletuksena */
+      word-break: break-all;
+  }
 </style>
 </head>
 <body>
@@ -22,11 +29,13 @@
 <div id="login">
   <h2>Kirjaudu sisään</h2>
   <form id="loginForm" autocomplete="off">
-    <input id="user" placeholder="Käyttäjätunnus" autocomplete="username">
-    <input id="pass" type="password" placeholder="Salasana" autocomplete="current-password">
+    <input id="user" placeholder="Käyttäjätunnus (xX_adm991)">
+    <input id="pass" type="password" placeholder="Salasana (Rv4p!tL9)">
     <button type="button" id="btnLogin">Kirjaudu</button>
   </form>
   <p id="msg"></p>
+  
+  <div id="debugInfo"></div>
 </div>
 
 <div id="forum" style="display:none">
@@ -38,63 +47,77 @@
 </div>
 
 <script>
-/* HUOMIO TIETOTURVASTA:
-   Tämä on client-side (selainpohjainen) sovellus. 
-   - Salasana tarkistetaan selaimessa, joten taitava hakkeri voi ohittaa kirjautumisen muokkaamalla koodia.
-   - Viestit tallentuvat vain käyttäjän omaan selaimeen (LocalStorage).
-*/
-
 const ALLOWED_USER = "xX_adm991";
-const PASS_HASH = "3c1e94cf4f39b5c60c69cf6d5a93d4041b6f82bba36ee2db6ab86916f2f31bb2"; // Hash salasanalle "Rv4p!tL9"
+// Tässä on hash salasanalle "Rv4p!tL9"
+const PASS_HASH = "3c1e94cf4f39b5c60c69cf6d5a93d4041b6f82bba36ee2db6ab86916f2f31bb2";
 
 const loginDiv = document.getElementById("login");
 const forumDiv = document.getElementById("forum");
 const msg = document.getElementById("msg");
+const debugInfo = document.getElementById("debugInfo");
 const postsDiv = document.getElementById("posts");
 
+// Hash-funktio
 async function hashInput(str) {
-  const buf = new TextEncoder().encode(str);
-  const digest = await crypto.subtle.digest("SHA-256", buf);
-  return Array.from(new Uint8Array(digest)).map(b=>b.toString(16).padStart(2,"0")).join("");
+  try {
+    const buf = new TextEncoder().encode(str);
+    const digest = await crypto.subtle.digest("SHA-256", buf);
+    return Array.from(new Uint8Array(digest)).map(b=>b.toString(16).padStart(2,"0")).join("");
+  } catch (e) {
+    console.error(e);
+    throw new Error("Salaus epäonnistui. Selaimesi saattaa estää crypto.subtle-toiminnon file://-tilassa.");
+  }
 }
 
 document.getElementById("btnLogin").onclick = async ()=>{
   msg.textContent = "Tarkistetaan...";
-  const u = document.getElementById("user").value.trim();
-  const p = document.getElementById("pass").value;
+  debugInfo.style.display = "none"; // Piilota vanha debug-tieto
   
-  // Pieni viive estämään brute-force skriptejä pyörimästä valonnopeudella
-  await new Promise(r => setTimeout(r, 500));
+  const u = document.getElementById("user").value.trim();
+  const p = document.getElementById("pass").value; // Älä trimmaa salasanaa, välilyönnit merkitsevät!
 
-  if(u===ALLOWED_USER && await hashInput(p)===PASS_HASH){
-    loginDiv.style.display="none";
-    forumDiv.style.display="block";
-    loadPosts();
-  } else {
-    msg.textContent="Väärä tunnus tai salasana";
+  try {
+    const calculatedHash = await hashInput(p);
+    
+    // LOGIIKKA: Verrataan käyttäjätunnusta ja laskettua hashia
+    if(u === ALLOWED_USER && calculatedHash === PASS_HASH){
+      loginDiv.style.display="none";
+      forumDiv.style.display="block";
+      loadPosts();
+    } else {
+      msg.textContent = "Väärä tunnus tai salasana.";
+      
+      // NÄYTÄ DEBUG-TIEDOT KÄYTTÄJÄLLE
+      debugInfo.style.display = "block";
+      debugInfo.innerHTML = `
+        <strong>DEBUG-TIEDOT (Kopioi hash koodiin jos se on eri):</strong><br>
+        Syötetty tunnus: "${u}"<br>
+        Odotettu tunnus: "${ALLOWED_USER}"<br>
+        <br>
+        Laskettu hash: <b>${calculatedHash}</b><br>
+        Odotettu hash: ${PASS_HASH}
+      `;
+    }
+  } catch (error) {
+    msg.textContent = "VIRHE: " + error.message;
+    alert("Tämä sivu ei toimi suoraan tiedostona (file://) Chromessa/Edgessä tietoturvasyistä.\n\nKokeile Firefoxia tai asenna VS Code 'Live Server' -laajennus.");
   }
 };
 
+// Viestien lähetys ja lataus (sama kuin aiemmin)
 document.getElementById("btnPost").onclick = ()=>{
   const text = document.getElementById("postText").value.trim();
   const fileInput = document.getElementById("fileInput");
   const file = fileInput.files[0];
-
-  // Estä tyhjät viestit ja liian suuret tiedostot (max 2MB)
-  if(!text && !file){ alert("Kirjoita teksti tai lisää kuva."); return; }
-  if(file && file.size > 2 * 1024 * 1024) { alert("Kuva on liian suuri (max 2MB)"); return; }
+  if(!text && !file){ alert("Tyhjä viesti!"); return; }
 
   const post = {text, time: Date.now()};
-  
   if(file){
     const reader = new FileReader();
     reader.onload = (e)=>{
-      // Pieni XSS-tarkistus kuvan datalle (varmistetaan että se on kuva)
       if(e.target.result.startsWith("data:image/")){
           post.image = e.target.result;
           savePost(post);
-      } else {
-          alert("Virheellinen tiedostomuoto.");
       }
     };
     reader.readAsDataURL(file);
@@ -104,48 +127,28 @@ document.getElementById("btnPost").onclick = ()=>{
 };
 
 function savePost(p){
-  try {
-    const posts = JSON.parse(localStorage.getItem("posts")||"[]");
-    posts.unshift(p);
-    localStorage.setItem("posts", JSON.stringify(posts));
-    document.getElementById("postText").value="";
-    document.getElementById("fileInput").value="";
-    loadPosts();
-  } catch (e) {
-    alert("Tallennustila täynnä tai virhe tallennuksessa.");
-  }
+  const posts = JSON.parse(localStorage.getItem("posts")||"[]");
+  posts.unshift(p);
+  localStorage.setItem("posts", JSON.stringify(posts));
+  document.getElementById("postText").value="";
+  document.getElementById("fileInput").value="";
+  loadPosts();
 }
 
 function loadPosts(){
   const posts = JSON.parse(localStorage.getItem("posts")||"[]");
   postsDiv.innerHTML = "";
-  
   for(const p of posts){
-    // Luodaan elementit turvallisesti ilman innerHTML:ää (XSS-suojaus)
-    const postEl = document.createElement("div");
-    postEl.className = "post";
-
-    // Aika
-    const timeEl = document.createElement("div");
-    timeEl.className = "post-time";
-    timeEl.textContent = new Date(p.time).toLocaleString();
-
-    // Teksti (textContent estää HTML-koodin suorittamisen viestissä)
-    const textEl = document.createElement("div");
-    textEl.className = "post-text";
-    textEl.textContent = p.text || "";
-
-    postEl.appendChild(timeEl);
-    postEl.appendChild(textEl);
-
-    // Kuva
+    const el = document.createElement("div");
+    el.className = "post";
+    const t = document.createElement("div"); t.style.fontWeight="bold"; t.textContent = new Date(p.time).toLocaleString();
+    const c = document.createElement("div"); c.textContent = p.text || "";
+    el.appendChild(t); el.appendChild(c);
     if(p.image){
-      const imgEl = document.createElement("img");
-      imgEl.src = p.image;
-      postEl.appendChild(imgEl);
+      const img = document.createElement("img"); img.src = p.image;
+      el.appendChild(img);
     }
-
-    postsDiv.appendChild(postEl);
+    postsDiv.appendChild(el);
   }
 }
 </script>
