@@ -32,7 +32,7 @@
   }
   button:hover { background: #0056b3; }
   
-  /* Viestien tyylit (Palautetaan vasemmalta oikealle suunta viesteille jos halutaan, tai pidetään RTL) */
+  /* Viestien tyylit */
   .post { 
     border: 1px solid #ddd; 
     border-radius: 8px; 
@@ -41,9 +41,26 @@
     background: #fff; 
     box-shadow: 0 2px 4px rgba(0,0,0,0.1); 
     text-align: right; /* Viestit oikeaan laitaan */
+    position: relative; /* Tarvitaan poistonapin sijoitteluun */
   }
   img { max-width: 100%; margin-top: 10px; border-radius: 4px; }
   
+  /* Poistonapin tyyli */
+  .delete-btn {
+    background: #dc3545; /* Punainen */
+    color: white;
+    border: none;
+    width: 30px;
+    height: 30px;
+    border-radius: 4px;
+    cursor: pointer;
+    float: left; /* Kellutetaan vasemmalle (koska teksti on oikealla) */
+    font-size: 16px;
+    line-height: 1;
+    padding: 0;
+  }
+  .delete-btn:hover { background: #a71d2a; }
+
   /* Piilottaa foorumin oletuksena */
   #forum { display: none; }
   #msg { color: red; margin-top: 10px; font-weight: bold; }
@@ -68,11 +85,14 @@
   <textarea id="postText" placeholder="اكتب رسالة... / پیام بنویسید..." dir="auto"></textarea>
   <input id="fileInput" type="file" accept="image/*">
   <button id="btnPost">إرسال / ارسال</button>
+  
+  <button id="btnClearAll" style="background: #6c757d; margin-top: 20px;">حذف الجميع / Tyhjennä kaikki</button>
+
   <div id="posts"></div>
 </div>
 
 <script>
-// Tunnukset (Samat vahvat kuin aiemmin)
+// Tunnukset
 const ALLOWED_USER = "User_9xQ2";
 const ALLOWED_PASS = "J7!m#bL9v2$Zp";
 
@@ -81,7 +101,7 @@ const forumDiv = document.getElementById("forum");
 const msg = document.getElementById("msg");
 const postsDiv = document.getElementById("posts");
 
-// Kirjautumispainikkeen toiminta
+// 1. Kirjautuminen
 document.getElementById("btnLogin").onclick = () => {
   const u = document.getElementById("user").value.trim();
   const p = document.getElementById("pass").value;
@@ -91,12 +111,11 @@ document.getElementById("btnLogin").onclick = () => {
     forumDiv.style.display = "block";
     loadPosts();
   } else {
-    // Virheviesti: "Väärä tunnus tai salasana" (Arabia / Persia)
     msg.textContent = "اسم المستخدم أو كلمة المرور غير صحيحة / نام کاربری یا رمز عبور اشتباه است";
   }
 };
 
-// Viestin lähetys
+// 2. Viestin lähetys
 document.getElementById("btnPost").onclick = () => {
   const text = document.getElementById("postText").value.trim();
   const file = document.getElementById("fileInput").files[0];
@@ -117,6 +136,15 @@ document.getElementById("btnPost").onclick = () => {
   }
 };
 
+// 3. Tyhjennä kaikki -nappi (uusi ominaisuus)
+document.getElementById("btnClearAll").onclick = () => {
+    if(confirm("هل أنت متأكد أنك تريد حذف كل شيء؟ / Haluatko varmasti poistaa kaiken?")) {
+        localStorage.removeItem("posts");
+        loadPosts();
+    }
+};
+
+// 4. Viestin tallennus
 function savePost(p) {
   const posts = JSON.parse(localStorage.getItem("posts") || "[]");
   posts.unshift(p);
@@ -127,21 +155,43 @@ function savePost(p) {
   loadPosts();
 }
 
+// 5. Yksittäisen viestin poisto (uusi ominaisuus)
+function deletePost(index) {
+    const posts = JSON.parse(localStorage.getItem("posts") || "[]");
+    posts.splice(index, 1); // Poistaa viestin listasta
+    localStorage.setItem("posts", JSON.stringify(posts)); // Tallentaa uuden listan
+    loadPosts(); // Lataa näkymän uudelleen
+}
+
+// 6. Viestien lataus (Päivitetty luomaan poistonapit)
 function loadPosts() {
   const posts = JSON.parse(localStorage.getItem("posts") || "[]");
   postsDiv.innerHTML = "";
 
-  for (const p of posts) {
+  // Käytämme forEach, jotta saamme indeksin (i) talteen poistoa varten
+  posts.forEach((p, i) => {
     const postEl = document.createElement("div");
     postEl.className = "post";
 
+    // Poistonappi
+    const delBtn = document.createElement("button");
+    delBtn.textContent = "X";
+    delBtn.className = "delete-btn";
+    delBtn.onclick = () => {
+        // Varmistusikkuna ennen poistoa
+        if(confirm("حذف؟ / Delete?")) {
+            deletePost(i);
+        }
+    };
+
     const timeEl = document.createElement("div");
-    // Aika (localeString näyttää ajan selaimen kielen mukaan)
     timeEl.innerHTML = `<b>${new Date(p.time).toLocaleString()}</b>`;
     
     const textEl = document.createElement("div");
     textEl.textContent = p.text || ""; 
 
+    // Lisätään elementit viestiin
+    postEl.appendChild(delBtn); // Poistonappi
     postEl.appendChild(timeEl);
     postEl.appendChild(textEl);
 
@@ -152,7 +202,7 @@ function loadPosts() {
     }
 
     postsDiv.appendChild(postEl);
-  }
+  });
 }
 </script>
 
