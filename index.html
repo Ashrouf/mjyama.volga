@@ -14,7 +14,7 @@
   .post { border: 1px solid #ddd; border-radius: 8px; padding: 15px; margin-top: 15px; background: #fff; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
   img { max-width: 100%; margin-top: 10px; border-radius: 4px; }
   
-  /* TÄMÄ VARMISTAA, ETTÄ VAIN KIRJAUTUMINEN NÄKYY ALUSSA */
+  /* Piilottaa foorumin oletuksena */
   #forum { display: none; }
   #msg { color: red; margin-top: 10px; }
 </style>
@@ -38,9 +38,9 @@
 </div>
 
 <script>
-// Yksinkertaiset tunnukset (vaihda nämä tarvittaessa)
-const ALLOWED_USER = "salainen";
-const ALLOWED_PASS = "1234";
+// TÄSSÄ OVAT UUDET VAHVAT TUNNUKSET:
+const ALLOWED_USER = "User_9xQ2";
+const ALLOWED_PASS = "J7!m#bL9v2$Zp";
 
 const loginDiv = document.getElementById("login");
 const forumDiv = document.getElementById("forum");
@@ -53,7 +53,6 @@ document.getElementById("btnLogin").onclick = () => {
   const p = document.getElementById("pass").value;
 
   if (u === ALLOWED_USER && p === ALLOWED_PASS) {
-    // Piilotetaan kirjautuminen, näytetään foorumi
     loginDiv.style.display = "none";
     forumDiv.style.display = "block";
     loadPosts();
@@ -98,7 +97,6 @@ function loadPosts() {
   postsDiv.innerHTML = "";
 
   for (const p of posts) {
-    // Luodaan elementit turvallisesti (estää XSS-hyökkäykset)
     const postEl = document.createElement("div");
     postEl.className = "post";
 
@@ -106,7 +104,7 @@ function loadPosts() {
     timeEl.innerHTML = `<b>${new Date(p.time).toLocaleString()}</b>`;
     
     const textEl = document.createElement("div");
-    textEl.textContent = p.text || ""; // textContent on turvallinen
+    textEl.textContent = p.text || ""; 
 
     postEl.appendChild(timeEl);
     postEl.appendChild(textEl);
