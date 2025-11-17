@@ -1,1 +1,189 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Alles wird gut</title>
+<style>
+  body { 
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
+    margin: 40px auto; 
+    max-width: 700px; 
+    padding: 0 16px; 
+    background: #f4f4f9; 
+    text-align: center; 
+  }
+  input, textarea, button { 
+    width: 100%; 
+    padding: 12px; 
+    margin-top: 10px; 
+    box-sizing: border-box; 
+    border-radius: 4px; 
+    border: 1px solid #ccc; 
+    font-family: inherit; 
+    font-size: 1.1em; 
+  }
+  button { 
+    background: #007bff; 
+    color: white; 
+    border: none; 
+    font-weight: bold; 
+    cursor: pointer; 
+  }
+  button:hover { background: #0056b3; }
+  
+  .post { 
+    border: 1px solid #ddd; 
+    border-radius: 8px; 
+    padding: 15px; 
+    margin-top: 15px; 
+    background: #fff; 
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1); 
+    text-align: right; 
+  }
+  img { max-width: 100%; margin-top: 10px; border-radius: 4px; }
 
+  #forum { display: none; }
+  #msg { color: red; margin-top: 10px; font-weight: bold; }
+</style>
+</head>
+<body>
+
+<div id="login">
+  <h2>تسجيل الدخول / ورود</h2>
+  <input id="user" placeholder="اسم المستخدم / نام کاربری" dir="auto">
+  <input id="pass" type="password" placeholder="كلمة المرور / رمز عبور" dir="auto">
+  <button id="btnLogin">دخول / ورود</button>
+  <p id="msg"></p>
+</div>
+
+<div id="forum">
+  <h2>Alles wird gut</h2>
+  <textarea id="postText" placeholder="اكتب رسالة... / پیام بنویسید..." dir="auto"></textarea>
+  <input id="fileInput" type="file" accept="image/*">
+  <button id="btnPost">إرسال / ارسال</button>
+  <div id="posts"></div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/dompurify@2.4.2/dist/purify.min.js"></script> <!-- DOMPurify -->
+
+<script>
+// Käyttäjätunnukset ja salasanat (hashatut versiot)
+const USERS = [
+  { user: "User_9xQ2", passHash: "sha256$3bdbcc2ab0ba9d11e408acb539ad34fddf72e5f7f67a623ac3746de1d6056f8c" }, // Esimerkki hashattu salasana
+  { user: "User_2A@d8", passHash: "sha256$eb96c99c971a0e10e2e12fbc0dbf67b29f62a17cc949b15eb240f3374db6a8c1" } // Esimerkki hashattu salasana
+];
+
+const loginDiv = document.getElementById("login");
+const forumDiv = document.getElementById("forum");
+const msg = document.getElementById("msg");
+const postsDiv = document.getElementById("posts");
+
+// Salasanan tarkistaminen (hashauksen avulla)
+function verifyPassword(inputUser, inputPass) {
+  const user = USERS.find(u => u.user === inputUser);
+  if (!user) return false;
+  
+  // Luodaan hash käyttäjän syöttämästä salasanasta
+  const inputPassHash = sha256(inputPass); // sha256 on yksinkertainen esimerkki; käytä oikeaa salausta
+  return user.passHash === inputPassHash;
+}
+
+// Kirjautuminen
+document.getElementById("btnLogin").onclick = () => {
+  const u = document.getElementById("user").value.trim();
+  const p = document.getElementById("pass").value;
+
+  if (verifyPassword(u, p)) {
+    loginDiv.style.display = "none";
+    forumDiv.style.display = "block";
+    loadPosts();
+  } else {
+    msg.textContent = "اسم المستخدم أو كلمة المرور غير صحيحة / نام کاربری یا رمز عبور اشتباه است";
+  }
+};
+
+// Viestin lähetys
+document.getElementById("btnPost").onclick = () => {
+  const text = document.getElementById("postText").value.trim();
+  const file = document.getElementById("fileInput").files[0];
+
+  if (!text && !file) { 
+    alert("Empty message / رسالة فارغة"); 
+    return; 
+  }
+
+  const sanitizedText = DOMPurify.sanitize(text); // Suodatetaan mahdolliset XSS-hyökkäykset
+
+  const post = { text: sanitizedText, time: Date.now(), user: "currentUser" }; // Tähän voi lisätä aktiivisen käyttäjän nimen
+
+  if (file) {
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      post.image = e.target.result;
+      savePost(post);
+    };
+    reader.readAsDataURL(file);
+  } else {
+    savePost(post);
+  }
+};
+
+function savePost(p) {
+  const posts = JSON.parse(localStorage.getItem("posts") || "[]");
+  posts.unshift(p);
+  localStorage.setItem("posts", JSON.stringify(posts));
+  
+  document.getElementById("postText").value = "";
+  document.getElementById("fileInput").value = "";
+  loadPosts();
+}
+
+function loadPosts() {
+  const posts = JSON.parse(localStorage.getItem("posts") || "[]");
+  postsDiv.innerHTML = "";
+
+  for (const p of posts) {
+    const postEl = document.createElement("div");
+    postEl.className = "post";
+
+    const timeEl = document.createElement("div");
+    timeEl.innerHTML = `<b>${new Date(p.time).toLocaleString()}</b>`;
+    
+    const textEl = document.createElement("div");
+    textEl.textContent = p.text || ""; 
+
+    const deleteBtn = document.createElement("button");
+    deleteBtn.textContent = "حذف / Delete";
+    deleteBtn.onclick = () => deletePost(p.time);
+
+    postEl.appendChild(timeEl);
+    postEl.appendChild(textEl);
+    postEl.appendChild(deleteBtn);
+
+    if (p.image) {
+      const img = document.createElement("img");
+      img.src = p.image;
+      postEl.appendChild(img);
+    }
+
+    postsDiv.appendChild(postEl);
+  }
+}
+
+function deletePost(time) {
+  const posts = JSON.parse(localStorage.getItem("posts") || "[]");
+  const updatedPosts = posts.filter(p => p.time !== time);
+  localStorage.setItem("posts", JSON.stringify(updatedPosts));
+  loadPosts();
+}
+
+// Hashing function (esimerkiksi SHA-256) - lisättävä oikea funktio käyttämällä CryptoJS tai muuta
+function sha256(message) {
+  const hash = new Uint8Array(32); // Placeholder
+  return hash;
+}
+</script>
+
+</body>
+</html>
